@@ -1,0 +1,42 @@
+-- =============================================
+-- Author:		Nepo Ned
+-- Create date: 18/01/2023
+-- Description:	This sp returns the S&P data mapped to their corresponding indices from datahub for monthly.
+-- =============================================
+
+CREATE PROCEDURE pr_GetOrderSummary 
+(  @StartDate DATE, 
+   @EndDate DATE, 
+   @EmployeeID INT = NULL, 
+   @CustomerID INT = NULL
+ )
+AS
+BEGIN
+		SELECT
+		CONCAT(e.TitleOfCourtesy, ' ', e.FirstName, ' ', e.LastName) AS EmployeeFullName,
+		s.CompanyName AS ShipperCompanyName,
+		c.CompanyName AS CustomerCompanyName,
+		COUNT(DISTINCT o.OrderID) AS NumberOfOrders,
+		DATEPART(DAY, o.OrderDate) AS OrderDay,
+		SUM(o.Freight) AS TotalFreightCost,
+		COUNT(DISTINCT od.ProductID) AS NumberOfDifferentProducts,
+		SUM(od.UnitPrice * od.Quantity) AS TotalOrderValue
+		FROM Orders o
+		JOIN Employees e
+		ON o.EmployeeID = e.EmployeeID
+		JOIN Customers c
+		ON o.CustomerID = c.CustomerID
+		JOIN Shippers s
+		ON o.ShipVia = s.ShipperID
+		JOIN [Order Details] od
+		ON o.OrderID = od.OrderID
+		WHERE o.OrderDate BETWEEN @StartDate AND @EndDate
+		AND (@EmployeeID IS NULL OR o.EmployeeID = @EmployeeID)
+		AND (@CustomerID IS NULL OR o.CustomerID = @CustomerID)
+		GROUP BY
+		DATEPART(DAY, o.OrderDate),
+		CONCAT(e.TitleOfCourtesy, ' ', e.FirstName, ' ', e.LastName),
+		s.CompanyName,
+		c.CompanyName
+END
+
